@@ -125,7 +125,7 @@ jobs:
         curl -i \
           --request POST \
           --header "Content-Type: application/json" \
-          --header "X-API-Key: $INFRACOST_API_KEY" \
+          --header "X-API-Key: ${{ secrets.INFRACOST_API_KEY }}" \
           --data "{ \"query\": \"mutation {updatePullRequestStatus( url: \\\"${{ github.event.pull_request.html_url }}\\\", status: $PR_STATUS )}\" }" \
           "https://dashboard.api.infracost.io/graphql";
       env:
