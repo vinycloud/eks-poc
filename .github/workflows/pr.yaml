@@ -57,7 +57,7 @@ jobs:
 
     - name: Gerar estimativa de custos com Infracost
       run: |
-        infracost breakdown --path=. \
+        infracost breakdown --path=eks-terraform \
           --format=json \
           --out-file=infracost.json
         infracost output --path=infracost.json --format=table > infracost.txt
