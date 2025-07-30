@@ -52,7 +52,7 @@ jobs:
       id: plan
       run: |
         terraform plan -out=plan.txt -no-color
-        terraform show -no-color plan.txt
+        terraform show -no-color plan.txt > plan-show.txt
         terraform show -json plan.txt > plan.json
       working-directory: terraform-eks/
 
@@ -62,7 +62,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          const planOutput = fs.readFileSync('terraform-eks/plan.txt', 'utf8');
+          const planOutput = fs.readFileSync('terraform-eks/plan-show.txt', 'utf8');
           const output = `#### Resultado do Terraform Plan\n\n\n\u0060\u0060\u0060\n${planOutput}\n\u0060\u0060\u0060`;
           github.rest.issues.createComment({
             issue_number: context.issue.number,
