@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-new-comments
+  namespace: app
+  labels:
+    app: api-new-comments
+spec:
+  selector:
+    app: api-new-comments
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
