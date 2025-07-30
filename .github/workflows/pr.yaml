@@ -56,6 +56,21 @@ jobs:
         terraform show -json plan.txt > plan.json
       working-directory: terraform-eks/
 
+    - name: Comentar resultado do Terraform Plan na PR
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const planOutput = fs.readFileSync('terraform-eks/plan.txt', 'utf8');
+          const output = `#### Resultado do Terraform Plan\n\n\n\u0060\u0060\u0060\n${planOutput}\n\u0060\u0060\u0060`;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          });
+
     - name: Gerar estimativa de custos com Infracost
       run: |
         infracost breakdown --path=. \
