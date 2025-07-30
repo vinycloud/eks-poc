@@ -25,13 +25,13 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       run: |
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 017820672128.dkr.ecr.us-east-1.amazonaws.com
+        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
     - name: Build and Push Docker Image
       run: |
         cd application
-        docker build -t 017820672128.dkr.ecr.us-east-1.amazonaws.com/new-comments:v1 .
-        docker push 017820672128.dkr.ecr.us-east-1.amazonaws.com/new-comments:v1
+        docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1 .
+        docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1
 
   deploy:
     runs-on: ubuntu-latest
