@@ -52,6 +52,7 @@ jobs:
       id: plan
       run: |
         terraform plan -out=plan.txt -no-color
+        terraform show -no-color plan.txt
         terraform show -json plan.txt > plan.json
       working-directory: terraform-eks/
 
