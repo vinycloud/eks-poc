@@ -68,8 +68,9 @@ jobs:
             body: output
           })
 
-  infracost-pull-request-checks:
+  infracost-pull-request-checks:    
     name: Infracost Pull Request Checks
+    needs: terraform-eks
     runs-on: ubuntu-latest
     permissions:
       contents: read
