@@ -55,7 +55,7 @@ jobs:
       # Generate Infracost JSON file as the baseline.
       - name: Generate Infracost cost estimate baseline
         run: |
-          infracost breakdown --path=. \
+          infracost breakdown --path=terraform-eks \
                               --format=json \
                               --out-file=/tmp/infracost-base.json
 
@@ -66,7 +66,7 @@ jobs:
       # Generate an Infracost diff and save it to a JSON file.
       - name: Generate Infracost diff
         run: |
-          infracost diff --path=. \
+          infracost diff --path=terraform-eks \
                           --format=json \
                           --compare-to=/tmp/infracost-base.json \
                           --out-file=/tmp/infracost.json
@@ -104,7 +104,7 @@ jobs:
 
       - name: Run Infracost on default branch and update Infracost Cloud
         run: |
-          infracost breakdown --path=. \
+          infracost breakdown --path=terraform-eks \
                     --format=json \
                     --out-file=infracost.json
 
