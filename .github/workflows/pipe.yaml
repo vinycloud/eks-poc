@@ -21,8 +21,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: 02-kube-news/src
-        file: 02-kube-news/src/Dockerfile
+        context: application
+        file: application/Dockerfile
         push: true
         tags: | 
           vinycloud/application-poc:v${{ github.run_number }}
