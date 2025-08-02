@@ -1,4 +1,4 @@
-name: Build and Push to ECR
+name: Build and Push to Registry
 
 on:
   push:
@@ -8,30 +8,25 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4.1.1
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      run: |
-        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-
-    - name: Build and Push Docker Image
-      run: |
-        cd application
-        docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1 .
-        docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: application
+        file: application/Dockerfile
+        push: true
+        tags: | 
+          vinycloud/application-poc:v${{ github.run_number }}
+          vinycloud/application-poc:latest
 
   # deploy:
   #   runs-on: ubuntu-latest
