@@ -33,114 +33,114 @@ jobs:
         docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1 .
         docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/new-comments:v1
 
-  deploy:
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_REGION: us-east-1
       
-    needs: build-and-push
+  #   needs: build-and-push
 
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4.1.1
+  #   steps:
+  #   - name: Checkout Repository
+  #     uses: actions/checkout@v4.1.1
 
-    - name: Set up AWS CLI
-      uses: aws-actions/configure-aws-credentials@v4.0.2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+  #   - name: Set up AWS CLI
+  #     uses: aws-actions/configure-aws-credentials@v4.0.2
+  #     with:
+  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       aws-region: ${{ env.AWS_REGION }}
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.12.1
+  #   - name: Setup Terraform
+  #     uses: hashicorp/setup-terraform@v3
+  #     with:
+  #       terraform_version: 1.12.1
 
-    - name: Run Terraform
-      run: |
-        cd terraform-eks
-        terraform init
-        terraform apply -auto-approve
+  #   - name: Run Terraform
+  #     run: |
+  #       cd terraform-eks
+  #       terraform init
+  #       terraform apply -auto-approve
 
-    - name: Update Kubeconfig
-      run: |
-        aws eks --region us-east-1 update-kubeconfig --name devops-cluster
-        chmod 600 ~/.kube/config
+  #   - name: Update Kubeconfig
+  #     run: |
+  #       aws eks --region us-east-1 update-kubeconfig --name devops-cluster
+  #       chmod 600 ~/.kube/config
 
-    - name: Install metrics server
-      run: |
-        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml --validate=false || true
+  #   - name: Install metrics server
+  #     run: |
+  #       kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml --validate=false || true
 
-    - name: Create namespace if not exists
-      run: |
-        kubectl create namespace app --dry-run=client -o yaml | kubectl apply -f -
+  #   - name: Create namespace if not exists
+  #     run: |
+  #       kubectl create namespace app --dry-run=client -o yaml | kubectl apply -f -
 
-    - name: Deploy applications comments to EKS
-      run: |
-        # Aplica os manifestos com --force para atualizar recursos existentes
-        kubectl apply -f manifests/deployment.yaml --force
-        kubectl apply -f manifests/service.yaml --force
-        kubectl apply -f manifests/hpa.yaml --force
-        kubectl apply -f manifests/ingress.yaml --force
+  #   - name: Deploy applications comments to EKS
+  #     run: |
+  #       # Aplica os manifestos com --force para atualizar recursos existentes
+  #       kubectl apply -f manifests/deployment.yaml --force
+  #       kubectl apply -f manifests/service.yaml --force
+  #       kubectl apply -f manifests/hpa.yaml --force
+  #       kubectl apply -f manifests/ingress.yaml --force
 
-    - name: Install Helm
-      run: |
-        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-        chmod +x get_helm.sh
-        ./get_helm.sh
+  #   - name: Install Helm
+  #     run: |
+  #       curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+  #       chmod +x get_helm.sh
+  #       ./get_helm.sh
 
-    - name: Add repo kube-prometheus and Update Helm Repository
-      run: |
-        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
-        helm repo add grafana https://grafana.github.io/helm-charts || true
-        helm repo update
+  #   - name: Add repo kube-prometheus and Update Helm Repository
+  #     run: |
+  #       helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+  #       helm repo add grafana https://grafana.github.io/helm-charts || true
+  #       helm repo update
 
-    - name: Deploy Helm Chart Prometheus and Grafana
-      run: |
-        # Verifica se o release já existe
-        if helm list -n monitoring | grep -q "prometheus"; then
-          echo "Updating existing Prometheus stack..."
-          helm upgrade prometheus prometheus-community/kube-prometheus-stack \
-            --namespace monitoring \
-            --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=gp2 \
-            --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
-            --set prometheus.prometheusSpec.resources.requests.cpu=500m \
-            --set prometheus.prometheusSpec.resources.requests.memory=1Gi \
-            --set prometheus.prometheusSpec.resources.limits.cpu=1000m \
-            --set prometheus.prometheusSpec.resources.limits.memory=2Gi \
-            --set grafana.persistence.enabled=true \
-            --set grafana.persistence.storageClassName=gp2 \
-            --set grafana.persistence.size=10Gi \
-            --set grafana.adminPassword=${{ secrets.PASSWD_GRAFANA }}
-        else
-          echo "Installing new Prometheus stack..."
-          helm install prometheus prometheus-community/kube-prometheus-stack \
-            --namespace monitoring --create-namespace \
-            --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=gp2 \
-            --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
-            --set prometheus.prometheusSpec.resources.requests.cpu=500m \
-            --set prometheus.prometheusSpec.resources.requests.memory=1Gi \
-            --set prometheus.prometheusSpec.resources.limits.cpu=1000m \
-            --set prometheus.prometheusSpec.resources.limits.memory=2Gi \
-            --set grafana.persistence.enabled=true \
-            --set grafana.persistence.storageClassName=gp2 \
-            --set grafana.persistence.size=10Gi \
-            --set grafana.adminPassword=${{ secrets.PASSWD_GRAFANA }}
-        fi
+  #   - name: Deploy Helm Chart Prometheus and Grafana
+  #     run: |
+  #       # Verifica se o release já existe
+  #       if helm list -n monitoring | grep -q "prometheus"; then
+  #         echo "Updating existing Prometheus stack..."
+  #         helm upgrade prometheus prometheus-community/kube-prometheus-stack \
+  #           --namespace monitoring \
+  #           --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=gp2 \
+  #           --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
+  #           --set prometheus.prometheusSpec.resources.requests.cpu=500m \
+  #           --set prometheus.prometheusSpec.resources.requests.memory=1Gi \
+  #           --set prometheus.prometheusSpec.resources.limits.cpu=1000m \
+  #           --set prometheus.prometheusSpec.resources.limits.memory=2Gi \
+  #           --set grafana.persistence.enabled=true \
+  #           --set grafana.persistence.storageClassName=gp2 \
+  #           --set grafana.persistence.size=10Gi \
+  #           --set grafana.adminPassword=${{ secrets.PASSWD_GRAFANA }}
+  #       else
+  #         echo "Installing new Prometheus stack..."
+  #         helm install prometheus prometheus-community/kube-prometheus-stack \
+  #           --namespace monitoring --create-namespace \
+  #           --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=gp2 \
+  #           --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
+  #           --set prometheus.prometheusSpec.resources.requests.cpu=500m \
+  #           --set prometheus.prometheusSpec.resources.requests.memory=1Gi \
+  #           --set prometheus.prometheusSpec.resources.limits.cpu=1000m \
+  #           --set prometheus.prometheusSpec.resources.limits.memory=2Gi \
+  #           --set grafana.persistence.enabled=true \
+  #           --set grafana.persistence.storageClassName=gp2 \
+  #           --set grafana.persistence.size=10Gi \
+  #           --set grafana.adminPassword=${{ secrets.PASSWD_GRAFANA }}
+  #       fi
 
-    - name: Deploy Grafana Dashboard
-      run: |
-        kubectl apply -f manifests/grafana-dashboard.yaml --force
+  #   - name: Deploy Grafana Dashboard
+  #     run: |
+  #       kubectl apply -f manifests/grafana-dashboard.yaml --force
 
-    - name: Deploy Prometheus/Grafana Ingress
-      run: |
-        kubectl apply -f manifests/prometheus-ingress.yaml --force
+  #   - name: Deploy Prometheus/Grafana Ingress
+  #     run: |
+  #       kubectl apply -f manifests/prometheus-ingress.yaml --force
 
-    - name: Deploy ServiceMonitor
-      run: |
-        # Aguarda o CRD do ServiceMonitor estar disponível
-        kubectl wait --for=condition=established --timeout=60s crd/servicemonitors.monitoring.coreos.com || true
-        # Aguarda o Prometheus estar pronto
-        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n monitoring --timeout=300s || true
-        kubectl apply -f manifests/servicemonitor.yaml --force
+  #   - name: Deploy ServiceMonitor
+  #     run: |
+  #       # Aguarda o CRD do ServiceMonitor estar disponível
+  #       kubectl wait --for=condition=established --timeout=60s crd/servicemonitors.monitoring.coreos.com || true
+  #       # Aguarda o Prometheus estar pronto
+  #       kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n monitoring --timeout=300s || true
+  #       kubectl apply -f manifests/servicemonitor.yaml --force
 
