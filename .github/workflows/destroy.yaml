@@ -35,18 +35,18 @@ jobs:
       - name: Check EKS Cluster Existence
         id: check_cluster
         run: |
-          if aws eks describe-cluster --name devops-cluster --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-            echo "Cluster EKS devops-cluster existe, prosseguindo com a exclusão de recursos do Kubernetes."
+          if aws eks describe-cluster --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "Cluster EKS ${{ env.CLUSTER_NAME }} existe, prosseguindo com a exclusão de recursos do Kubernetes."
             echo "cluster_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "Cluster EKS devops-cluster não existe ou já foi destruído, pulando exclusão de recursos do Kubernetes."
+            echo "Cluster EKS ${{ env.CLUSTER_NAME }} não existe ou já foi destruído, pulando exclusão de recursos do Kubernetes."
             echo "cluster_exists=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Update Kubeconfig
         if: steps.check_cluster.outputs.cluster_exists == 'true'
         run: |
-          aws eks --region ${{ env.AWS_REGION }} update-kubeconfig --name devops-cluster
+          aws eks --region ${{ env.AWS_REGION }} update-kubeconfig --name ${{ env.CLUSTER_NAME }}
           chmod 600 ~/.kube/config
 
       - name: Check Kubernetes API Health
